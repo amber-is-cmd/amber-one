@@ -700,13 +700,13 @@
           setTimeout(() => setConfettiParticles([]), 3000);
         };
 
-        const triggerExplosion = () => {
+        const triggerExplosion = useCallback(() => {
           setShowExplosion(true);
-        };
+        }, []);
 
-        const resetExplosion = () => {
+        const resetExplosion = useCallback(() => {
           setShowExplosion(false);
-        };
+        }, []);
 
         // Calculate opacity for smooth transition
         const getOpacity = () => {
