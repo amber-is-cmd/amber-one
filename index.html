@@ -746,13 +746,6 @@
 
         return (
           <>
-            {showNameInput && (
-              <NameInputModal
-                time={time}
-                onSubmit={saveScore}
-                onCancel={() => setShowNameInput(false)}
-              />
-            )}
             <div className="glass-dark rounded-3xl p-6 w-auto">
               {/* Header */}
               <div className="flex justify-between items-center mb-4 px-2">
@@ -812,6 +805,17 @@
                 Left click to reveal • Right click to flag
               </div>
             </div>
+
+            {showNameInput && (
+              <NameInputModal
+                time={time}
+                onSubmit={saveScore}
+                onCancel={() => {
+                  setShowNameInput(false);
+                  if (onShowLeaderboard) onShowLeaderboard();
+                }}
+              />
+            )}
           </>
         );
       };
