@@ -225,16 +225,16 @@
           }
           setFlames(flameArray);
 
-          // Generate embers
+          // Generate embers - create multiple sets for continuous effect
           const emberArray = [];
-          for (let i = 0; i < 50; i++) {
+          for (let i = 0; i < 100; i++) {
             emberArray.push({
               id: i,
               left: Math.random() * 100,
               bottom: Math.random() * 30,
               size: Math.random() * 8 + 3,
-              duration: Math.random() * 3 + 2,
-              delay: Math.random() * 1,
+              duration: Math.random() * 4 + 3,
+              delay: Math.random() * 5,
               drift: (Math.random() - 0.5) * 100,
             });
           }
