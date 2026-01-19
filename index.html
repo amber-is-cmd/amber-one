@@ -154,6 +154,35 @@
         border-radius: 50%;
         animation: ember-rise linear infinite;
       }
+
+      /* Leaderboard fade-in animation */
+      @keyframes fade-in {
+        0% {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .fade-in {
+        animation: fade-in 0.8s ease-out forwards;
+      }
+
+      /* Modal overlay */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fade-in 0.3s ease-out;
+      }
     </style>
   </head>
   <body>
@@ -202,6 +231,113 @@
                 }}
               />
             ))}
+          </div>
+        );
+      };
+
+      // ==================== NAME INPUT MODAL ====================
+      const NameInputModal = ({ time, onSubmit, onCancel }) => {
+        const [name, setName] = useState('');
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (name.trim()) {
+            onSubmit(name.trim());
+          }
+        };
+
+        return (
+          <div className="modal-overlay" onClick={onCancel}>
+            <div
+              className="glass-dark rounded-3xl p-8 w-96 max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-3xl font-bold text-green-400 text-center mb-2">🎉 You Won!</h2>
+              <p className="text-white text-center mb-6">
+                Time: {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}
+              </p>
+              <form onSubmit={handleSubmit}>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  maxLength={20}
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl bg-gray-700 text-white text-lg border-2 border-gray-600 focus:border-green-400 focus:outline-none mb-4"
+                />
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gray-600 text-white font-semibold hover:bg-gray-500 transition-all active:scale-95"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!name.trim()}
+                    className="flex-1 px-4 py-3 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-400 disabled:bg-gray-700 disabled:text-gray-500 transition-all active:scale-95 disabled:active:scale-100"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== LEADERBOARD ====================
+      const Leaderboard = () => {
+        const [scores, setScores] = useState([]);
+
+        useEffect(() => {
+          const loadScores = () => {
+            try {
+              const saved = localStorage.getItem('minesweeper-leaderboard');
+              if (saved) {
+                setScores(JSON.parse(saved));
+              }
+            } catch (error) {
+              console.error('Failed to load leaderboard:', error);
+            }
+          };
+          loadScores();
+        }, []);
+
+        if (scores.length === 0) return null;
+
+        return (
+          <div className="fade-in mt-6 w-full max-w-md">
+            <div className="glass-dark rounded-3xl p-6">
+              <h3 className="text-2xl font-bold text-yellow-400 text-center mb-4">
+                🏆 Leaderboard
+              </h3>
+              <div className="space-y-2">
+                {scores.slice(0, 10).map((score, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between px-4 py-2 rounded-xl ${
+                      index === 0 ? 'bg-yellow-500/20 border border-yellow-500/50' :
+                      index === 1 ? 'bg-gray-400/20 border border-gray-400/50' :
+                      index === 2 ? 'bg-orange-600/20 border border-orange-600/50' :
+                      'bg-gray-700/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-white w-6">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                      </span>
+                      <span className="text-white font-medium">{score.name}</span>
+                    </div>
+                    <span className="text-green-400 font-mono font-semibold">
+                      {Math.floor(score.time / 60)}:{(score.time % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         );
       };
@@ -408,7 +544,7 @@
       };
 
       // ==================== MINESWEEPER ====================
-      const Minesweeper = ({ onExplosion }) => {
+      const Minesweeper = ({ onExplosion, onResetGame, onShowLeaderboard }) => {
         const GRID_SIZE = 9;
         const MINE_COUNT = 10;
 
@@ -417,6 +553,7 @@
         const [flagCount, setFlagCount] = useState(0);
         const [time, setTime] = useState(0);
         const [isFirstClick, setIsFirstClick] = useState(true);
+        const [showNameInput, setShowNameInput] = useState(false);
 
         const createEmptyGrid = () => {
           return Array(GRID_SIZE).fill(null).map(() =>
@@ -468,13 +605,29 @@
           return newGrid;
         };
 
+        const saveScore = (name) => {
+          try {
+            const saved = localStorage.getItem('minesweeper-leaderboard');
+            const scores = saved ? JSON.parse(saved) : [];
+            scores.push({ name, time, date: new Date().toISOString() });
+            scores.sort((a, b) => a.time - b.time);
+            localStorage.setItem('minesweeper-leaderboard', JSON.stringify(scores));
+            setShowNameInput(false);
+            if (onShowLeaderboard) onShowLeaderboard();
+          } catch (error) {
+            console.error('Failed to save score:', error);
+          }
+        };
+
         const initGame = useCallback(() => {
           setGrid(createEmptyGrid());
           setGameState('playing');
           setFlagCount(0);
           setTime(0);
           setIsFirstClick(true);
-        }, []);
+          setShowNameInput(false);
+          if (onResetGame) onResetGame();
+        }, [onResetGame]);
 
         useEffect(() => {
           initGame();
@@ -560,6 +713,7 @@
 
           if (checkWin(newGrid)) {
             setGameState('won');
+            setShowNameInput(true);
           }
         };
 
@@ -591,65 +745,74 @@
         };
 
         return (
-          <div className="glass-dark rounded-3xl p-6 w-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4 px-2">
-              <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
-                <span className="text-xl">🚩</span>
-                <span className="text-white font-mono text-lg">{MINE_COUNT - flagCount}</span>
-              </div>
-
-              <button
-                onClick={initGame}
-                className="glass rounded-xl px-4 py-2 text-2xl hover:bg-white/20 transition-all active:scale-95"
-              >
-                {gameState === 'won' ? '😎' : gameState === 'lost' ? '😵' : '🙂'}
-              </button>
-
-              <div className="glass rounded-xl px-4 py-2">
-                <span className="text-white font-mono text-lg">{formatTime(time)}</span>
-              </div>
-            </div>
-
-            {/* Game status */}
-            {gameState !== 'playing' && (
-              <div className={`text-center mb-4 py-2 rounded-xl ${gameState === 'won' ? 'bg-green-500/30' : 'bg-red-500/30'}`}>
-                <span className="text-white font-semibold text-lg">
-                  {gameState === 'won' ? '🎉 You Won!' : '💥 Game Over'}
-                </span>
-              </div>
+          <>
+            {showNameInput && (
+              <NameInputModal
+                time={time}
+                onSubmit={saveScore}
+                onCancel={() => setShowNameInput(false)}
+              />
             )}
+            <div className="glass-dark rounded-3xl p-6 w-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4 px-2">
+                <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
+                  <span className="text-xl">🚩</span>
+                  <span className="text-white font-mono text-lg">{MINE_COUNT - flagCount}</span>
+                </div>
 
-            {/* Grid */}
-            <div
-              className="grid gap-1"
-              style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-            >
-              {grid.map((row, rowIdx) =>
-                row.map((cell, colIdx) => (
-                  <button
-                    key={`${rowIdx}-${colIdx}`}
-                    onClick={() => handleClick(rowIdx, colIdx)}
-                    onContextMenu={(e) => handleRightClick(e, rowIdx, colIdx)}
-                    className={`
-                      cell w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold
-                      ${cell.isRevealed ? 'revealed' : ''}
-                      ${cell.isRevealed && cell.isMine ? 'mine' : ''}
-                      ${cell.isFlagged ? 'flagged' : ''}
-                      ${cell.neighborMines > 0 ? `num-${cell.neighborMines}` : ''}
-                    `}
-                  >
-                    {getCellContent(cell)}
-                  </button>
-                ))
+                <button
+                  onClick={initGame}
+                  className="glass rounded-xl px-4 py-2 text-2xl hover:bg-white/20 transition-all active:scale-95"
+                >
+                  {gameState === 'won' ? '😎' : gameState === 'lost' ? '😵' : '🙂'}
+                </button>
+
+                <div className="glass rounded-xl px-4 py-2">
+                  <span className="text-white font-mono text-lg">{formatTime(time)}</span>
+                </div>
+              </div>
+
+              {/* Game status */}
+              {gameState !== 'playing' && !showNameInput && (
+                <div className={`text-center mb-4 py-2 rounded-xl ${gameState === 'won' ? 'bg-green-500/30' : 'bg-red-500/30'}`}>
+                  <span className="text-white font-semibold text-lg">
+                    {gameState === 'won' ? '🎉 You Won!' : '💥 Game Over'}
+                  </span>
+                </div>
               )}
-            </div>
 
-            {/* Instructions */}
-            <div className="mt-4 text-center text-gray-400 text-xs">
-              Left click to reveal • Right click to flag
+              {/* Grid */}
+              <div
+                className="grid gap-1"
+                style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
+              >
+                {grid.map((row, rowIdx) =>
+                  row.map((cell, colIdx) => (
+                    <button
+                      key={`${rowIdx}-${colIdx}`}
+                      onClick={() => handleClick(rowIdx, colIdx)}
+                      onContextMenu={(e) => handleRightClick(e, rowIdx, colIdx)}
+                      className={`
+                        cell w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold
+                        ${cell.isRevealed ? 'revealed' : ''}
+                        ${cell.isRevealed && cell.isMine ? 'mine' : ''}
+                        ${cell.isFlagged ? 'flagged' : ''}
+                        ${cell.neighborMines > 0 ? `num-${cell.neighborMines}` : ''}
+                      `}
+                    >
+                      {getCellContent(cell)}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Instructions */}
+              <div className="mt-4 text-center text-gray-400 text-xs">
+                Left click to reveal • Right click to flag
+              </div>
             </div>
-          </div>
+          </>
         );
       };
 
@@ -660,6 +823,8 @@
         const [showCalculator, setShowCalculator] = useState(true);
         const [confettiParticles, setConfettiParticles] = useState([]);
         const [showExplosion, setShowExplosion] = useState(false);
+        const [showLeaderboard, setShowLeaderboard] = useState(false);
+        const [leaderboardKey, setLeaderboardKey] = useState(0);
 
         const handleToggle = () => {
           if (isTransitioning) return;
@@ -705,6 +870,17 @@
 
         const dismissExplosion = useCallback(() => {
           setShowExplosion(false);
+          setShowLeaderboard(true);
+          setLeaderboardKey(prev => prev + 1);
+        }, []);
+
+        const handleGameReset = useCallback(() => {
+          setShowLeaderboard(false);
+        }, []);
+
+        const handleShowLeaderboard = useCallback(() => {
+          setShowLeaderboard(true);
+          setLeaderboardKey(prev => prev + 1);
         }, []);
 
         // Calculate opacity for smooth transition
@@ -719,7 +895,7 @@
             <Confetti particles={confettiParticles} />
             <ToggleSwitch isOn={isCalculator} onToggle={handleToggle} />
 
-            <div className="min-h-screen bg-black flex items-center justify-center p-4 pt-20">
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 pt-20">
               <div
                 className="transition-opacity duration-[1000ms] ease-in-out"
                 style={{ opacity: isTransitioning ? 0 : 1 }}
@@ -727,9 +903,16 @@
                 {showCalculator ? (
                   <Calculator onConfetti={triggerConfetti} />
                 ) : (
-                  <Minesweeper onExplosion={triggerExplosion} />
+                  <Minesweeper
+                    onExplosion={triggerExplosion}
+                    onResetGame={handleGameReset}
+                    onShowLeaderboard={handleShowLeaderboard}
+                  />
                 )}
               </div>
+              {!showCalculator && showLeaderboard && (
+                <Leaderboard key={leaderboardKey} />
+              )}
             </div>
           </>
         );
