@@ -306,37 +306,42 @@
           loadScores();
         }, []);
 
-        if (scores.length === 0) return null;
-
         return (
           <div className="fade-in mt-6 w-full max-w-md">
             <div className="glass-dark rounded-3xl p-6">
               <h3 className="text-2xl font-bold text-yellow-400 text-center mb-4">
                 🏆 Leaderboard
               </h3>
-              <div className="space-y-2">
-                {scores.slice(0, 10).map((score, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between px-4 py-2 rounded-xl ${
-                      index === 0 ? 'bg-yellow-500/20 border border-yellow-500/50' :
-                      index === 1 ? 'bg-gray-400/20 border border-gray-400/50' :
-                      index === 2 ? 'bg-orange-600/20 border border-orange-600/50' :
-                      'bg-gray-700/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-white w-6">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+              {scores.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="text-lg">No scores yet</p>
+                  <p className="text-sm mt-2">Win a game to get on the board!</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {scores.slice(0, 10).map((score, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between px-4 py-2 rounded-xl ${
+                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/50' :
+                        index === 1 ? 'bg-gray-400/20 border border-gray-400/50' :
+                        index === 2 ? 'bg-orange-600/20 border border-orange-600/50' :
+                        'bg-gray-700/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-white w-6">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                        </span>
+                        <span className="text-white font-medium">{score.name}</span>
+                      </div>
+                      <span className="text-green-400 font-mono font-semibold">
+                        {Math.floor(score.time / 60)}:{(score.time % 60).toString().padStart(2, '0')}
                       </span>
-                      <span className="text-white font-medium">{score.name}</span>
                     </div>
-                    <span className="text-green-400 font-mono font-semibold">
-                      {Math.floor(score.time / 60)}:{(score.time % 60).toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
